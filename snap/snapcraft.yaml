@@ -1,0 +1,140 @@
+name: edgex-openvino-object-detection
+base: core20
+version: '0.1'
+summary: Single-line elevator pitch for your amazing snap
+description: |
+  This is my-snap's description. You have a paragraph or two to tell the
+  most important story about your snap. Keep it under 100 words though,
+  we live in tweetspace and your description wants to look good in the snap
+  store.
+
+grade: devel
+confinement: devmode
+
+parts:
+  openvino:
+    plugin: dump
+    source: https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_ubuntu20_2022.2.0.7713.af16ea1d79a_x86_64.tgz
+    stage-packages:
+      - build-essential
+      - libgtk-3-0
+      - libgl1
+      - python3
+      - python3-dev
+      - python3-venv
+      - python3-setuptools
+      - python3-pip
+      - python3-numpy
+      - cmake
+      - pkg-config
+      - g++
+      - gcc
+      - libc6-dev
+      - libgflags-dev
+      - zlib1g-dev
+      - nlohmann-json3-dev
+      - make
+      - curl
+      - sudo
+      - libusb-1.0-0
+      - libtinfo5
+      - gstreamer1.0-plugins-bad
+      - gstreamer1.0-plugins-base
+      - gstreamer1.0-plugins-good
+      - gstreamer1.0-plugins-ugly
+      - gstreamer1.0-tools
+      - libavcodec58
+      - libavformat58
+      - libavresample4
+      - libavutil56
+      - libgstreamer1.0-0
+      - libswscale5
+    override-build: |
+      mkdir -p $SNAPCRAFT_PART_INSTALL/openvino
+      cp -r $SNAPCRAFT_PART_SRC/* $SNAPCRAFT_PART_INSTALL/openvino
+  opencv:
+    plugin: cmake
+    after: [openvino]
+    source: https://github.com/opencv/opencv.git
+    source-tag: 4.6.0
+    source-depth: 1
+    override-build: |
+      export INTEL_OPENVINO_DIR=$SNAPCRAFT_STAGE/openvino
+      source $INTEL_OPENVINO_DIR/setupvars.sh
+      snapcraftctl build
+    cmake-generator: Ninja
+    cmake-parameters:
+      - -D BUILD_INFO_SKIP_EXTRA_MODULES=ON
+      - -D BUILD_EXAMPLES=OFF
+      - -D BUILD_JASPER=OFF
+      - -D BUILD_JAVA=OFF
+      - -D BUILD_JPEG=ON
+      - -D BUILD_APPS_LIST=version
+      - -D BUILD_opencv_apps=ON
+      - -D BUILD_opencv_java=OFF
+      - -D BUILD_OPENEXR=OFF
+      - -D BUILD_PNG=ON
+      - -D BUILD_TBB=OFF
+      - -D BUILD_WEBP=OFF
+      - -D BUILD_ZLIB=ON
+      - -D WITH_1394=OFF
+      - -D WITH_CUDA=OFF
+      - -D WITH_EIGEN=OFF
+      - -D WITH_GPHOTO2=OFF
+      - -D WITH_GSTREAMER=ON
+      - -D OPENCV_GAPI_GSTREAMER=OFF
+      - -D WITH_GTK_2_X=OFF
+      - -D WITH_IPP=ON
+      - -D WITH_JASPER=OFF
+      - -D WITH_LAPACK=OFF
+      - -D WITH_MATLAB=OFF
+      - -D WITH_MFX=ON
+      - -D WITH_OPENCLAMDBLAS=OFF
+      - -D WITH_OPENCLAMDFFT=OFF
+      - -D WITH_OPENEXR=OFF
+      - -D WITH_OPENJPEG=OFF
+      - -D WITH_QUIRC=OFF
+      - -D WITH_TBB=OFF
+      - -D WITH_TIFF=OFF
+      - -D WITH_VTK=OFF
+      - -D WITH_WEBP=OFF
+      - -D CMAKE_USE_RELATIVE_PATHS=ON
+      - -D CMAKE_SKIP_INSTALL_RPATH=ON
+      - -D ENABLE_BUILD_HARDENING=ON
+      - -D ENABLE_CONFIG_VERIFICATION=ON
+      - -D ENABLE_PRECOMPILED_HEADERS=OFF
+      - -D ENABLE_CXX11=ON
+      - -D INSTALL_PDB=ON
+      - -D INSTALL_TESTS=ON
+      - -D INSTALL_C_EXAMPLES=ON
+      - -D INSTALL_PYTHON_EXAMPLES=OFF
+      - -D CMAKE_INSTALL_PREFIX=install
+      - -D OPENCV_SKIP_PKGCONFIG_GENERATION=ON
+      - -D OPENCV_SKIP_PYTHON_LOADER=OFF
+      - -D OPENCV_SKIP_CMAKE_ROOT_CONFIG=ON
+      - -D OPENCV_GENERATE_SETUPVARS=OFF
+      - -D OPENCV_BIN_INSTALL_PATH=bin
+      - -D OPENCV_INCLUDE_INSTALL_PATH=include
+      - -D OPENCV_LIB_INSTALL_PATH=lib
+      - -D OPENCV_CONFIG_INSTALL_PATH=cmake
+      - -D OPENCV_3P_LIB_INSTALL_PATH=3rdparty
+      - -D OPENCV_DOC_INSTALL_PATH=doc
+      - -D OPENCV_OTHER_INSTALL_PATH=etc
+      - -D OPENCV_LICENSES_INSTALL_PATH=etc/licenses
+      - -D OPENCV_INSTALL_FFMPEG_DOWNLOAD_SCRIPT=ON
+      - -D BUILD_opencv_world=OFF
+      - -D BUILD_opencv_python2=OFF
+      - -D BUILD_opencv_python3=ON
+      - -D PYTHON3_PACKAGES_PATH=install/python/python3
+      - -D PYTHON3_LIMITED_API=ON
+      - -D HIGHGUI_PLUGIN_LIST=all
+      - -D OPENCV_PYTHON_INSTALL_PATH=python
+      - -D CPU_BASELINE=SSE4_2
+      - -D OPENCV_IPP_GAUSSIAN_BLUR=ON
+      - -D WITH_INF_ENGINE=ON
+      - -D InferenceEngine_DIR="${INTEL_OPENVINO_DIR}"/runtime/cmake/
+      - -D ngraph_DIR="${INTEL_OPENVINO_DIR}"/runtime/cmake/
+      - -D INF_ENGINE_RELEASE=2022010000
+      - -D VIDEOIO_PLUGIN_LIST=ffmpeg,gstreamer,mfx
+      - -D CMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined
+      - -D CMAKE_BUILD_TYPE=Release
