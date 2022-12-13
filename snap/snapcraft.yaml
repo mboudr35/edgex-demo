@@ -49,6 +49,12 @@ parts:
       - libavutil56
       - libgstreamer1.0-0
       - libswscale5
+      - libboost-filesystem-dev
+      - libboost-program-options-dev
+      - libboost-thread-dev
+      - libjson-c4
+      - libxxf86vm-dev
+      - jq
     override-build: |
       mkdir -p $SNAPCRAFT_PART_INSTALL/openvino
       cp -r $SNAPCRAFT_PART_SRC/* $SNAPCRAFT_PART_INSTALL/openvino
@@ -169,3 +175,20 @@ parts:
       - libmfx-dev
       - libgstreamer1.0-dev
       - libgstreamer-plugins-base1.0-dev
+  demo:
+    plugin: dump
+    source: demo
+    after: [openvino, opencv]
+    override-stage: |
+      snapcraftctl stage
+      cd $SNAPCRAFT_STAGE/openvino/deployment_tools/open_model_zoo/tools/downloader
+      python3 downloader.py --name yolo-v2-tiny-ava-0001
+apps:
+  edgex-demo:
+    command: start-object-detection.sh
+    environment:
+      DISPLAY: :0
+      DETECTION_MODEL: $SNAP/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/yolo-v2-tiny-ava-0001/FP32/yolo-v2-tiny-ava-0001.xml
+      DETECTION_MODEL_PROC: $SNAP/openvino/data_processing/dl_streamer/samples/model_proc/intel/object_detection/yolo-v2-tiny-ava-0001.json
+      CORE_COMMAND: http://localhost:59882
+      LD_LIBRARY_PATH: $SNAP/openvino/opt/intel/mediasdk/lib64:$SNAP/openvino/data_processing/dl_streamer/lib:$SNAP/openvino/data_processing/gstreamer/lib:$SNAP/openvino/opencv/lib:$SNAP/openvino/deployment_tools/ngraph/lib:$SNAP/openvino/deployment_tools/inference_engine/external/tbb/lib:$SNAP/openvino/deployment_tools/inference_engine/external/hddl/lib:$SNAP/openvino/deployment_tools/inference_engine/external/omp/lib:$SNAP/openvino/deployment_tools/inference_engine/external/gna/lib:$SNAP/openvino/deployment_tools/inference_engine/external/mkltiny_lnx/lib:$SNAP/openvino/deployment_tools/inference_engine/lib/intel64:$LD_LIBRARY_PATH
