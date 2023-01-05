@@ -14,7 +14,7 @@ confinement: devmode
 parts:
   openvino:
     plugin: dump
-    source: https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.2/linux/l_openvino_toolkit_ubuntu20_2022.2.0.7713.af16ea1d79a_x86_64.tgz
+    source: https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.3/linux/l_openvino_toolkit_ubuntu20_2022.3.0.9052.9752fafe8eb_x86_64.tgz
     stage-packages:
       - build-essential
       - libgtk-3-0
@@ -175,14 +175,40 @@ parts:
       - libmfx-dev
       - libgstreamer1.0-dev
       - libgstreamer-plugins-base1.0-dev
+  ovbase:
+    plugin: nil
+    after: [openvino, opencv]
+    override-stage: |
+      export INTEL_OPENVINO_DIR=$SNAPCRAFT_STAGE/openvino
+      #export PYTHONHOME=$SNAPCRAFT_STAGE/usr/local
+      export PYTHONPATH=$SNAPCRAFT_STAGE/usr/local/lib/python3.8:$SNAPCRAFT_STAGE/usr/lib/python3.8:$INTEL_OPENVINO_DIR/python/python3.8
+      cd $SNAPCRAFT_STAGE/openvino
+      python3.8 -m pip install --no-cache-dir --upgrade pip
+      python3.8 -m pip install --root=$SNAPCRAFT_STAGE --no-cache-dir --upgrade pip
+      python3.8 -m pip install --root=$SNAPCRAFT_STAGE --no-cache-dir openvino==2022.3.0
+      python3.8 -m pip install --root=$SNAPCRAFT_STAGE --no-cache-dir openvino_dev[caffe,kaldi,mxnet,onnx,pytorch,tensorflow2]==2022.3.0
+      mkdir -p $SNAPCRAFT_STAGE/openvino/extras
+      cp -r $SNAPCRAFT_STAGE/opencv $SNAPCRAFT_STAGE/openvino/extras/opencv
+      echo "export OpenCV_DIR=\$SNAP/openvino/extras/opencv/cmake" | tee -a "${SNAPCRAFT_STAGE}/openvino/extras/opencv/setupvars.sh"
+      echo "export LD_LIBRARY_PATH=\$SNAP/openvino/extras/opencv/lib:\$LD_LIBRARY_PATH" | tee -a "${SNAPCRAFT_STAGE}/openvino/extras/opencv/setupvars.sh"
+      git clone --recursive -b releases/2022/3 https://github.com/openvinotoolkit/open_model_zoo.git $SNAPCRAFT_STAGE/openvino/deployment-tools/open_model_zoo
+      sed -i '/opencv-python/d' $SNAPCRAFT_STAGE/openvino/deployment-tools/open_model_zoo/demos/common/python/requirements.txt
+      python3.8 -m pip install --root=$SNAPCRAFT_STAGE --no-cache-dir $SNAPCRAFT_STAGE/openvino/deployment-tools/open_model_zoo/demos/common/python/
+      #python3.8 -c "from openvino.model_zoo import model_api"
+      python3.8 -m pip install --root=$SNAPCRAFT_STAGE --no-cache-dir $SNAPCRAFT_STAGE/openvino/deployment-tools/open_model_zoo/tools/model_tools
   demo:
     plugin: dump
     source: demo
-    after: [openvino, opencv]
+    after: [ovbase]
     override-stage: |
       snapcraftctl stage
-      cd $SNAPCRAFT_STAGE/openvino/deployment_tools/open_model_zoo/tools/downloader
-      python3 downloader.py --name yolo-v2-tiny-ava-0001
+      export INTEL_OPENVINO_DIR=$SNAPCRAFT_STAGE/openvino
+      #cd $SNAPCRAFT_STAGE/openvino/deployment-tools/open_model_zoo/tools/model_tools
+      export PYTHONPATH=$SNAPCRAFT_STAGE/usr/local/lib/python3.8:$SNAPCRAFT_STAGE/usr/lib/python3.8:$INTEL_OPENVINO_DIR/python/python3.8
+      #export PYTHONHOME=$SNAPCRAFT_STAGE/usr/local/lib/python3.8
+      #python3.8 -m pip install --root=$SNAPCRAFT_STAGE --no-cache-dir yaml
+      #python3.8 downloader.py --name yolo-v2-tiny-ava-0001
+      $SNAPCRAFT_STAGE/usr/local/bin/omz_downloader --name yolo-v2-tiny-ava-0001
 apps:
   edgex-demo:
     command: start-object-detection.sh
@@ -192,3 +218,5 @@ apps:
       DETECTION_MODEL_PROC: $SNAP/openvino/data_processing/dl_streamer/samples/model_proc/intel/object_detection/yolo-v2-tiny-ava-0001.json
       CORE_COMMAND: http://localhost:59882
       LD_LIBRARY_PATH: $SNAP/openvino/opt/intel/mediasdk/lib64:$SNAP/openvino/data_processing/dl_streamer/lib:$SNAP/openvino/data_processing/gstreamer/lib:$SNAP/openvino/opencv/lib:$SNAP/openvino/deployment_tools/ngraph/lib:$SNAP/openvino/deployment_tools/inference_engine/external/tbb/lib:$SNAP/openvino/deployment_tools/inference_engine/external/hddl/lib:$SNAP/openvino/deployment_tools/inference_engine/external/omp/lib:$SNAP/openvino/deployment_tools/inference_engine/external/gna/lib:$SNAP/openvino/deployment_tools/inference_engine/external/mkltiny_lnx/lib:$SNAP/openvino/deployment_tools/inference_engine/lib/intel64:$LD_LIBRARY_PATH
+      INTEL_OPENVINO_DIR: $SNAP/openvino
+      PYTHONPATH: $SNAP:$SNAP/usr/lib/python3.8:$INTEL_OPENVINO_DIR/python/python3.8:$PYTHONPATH
