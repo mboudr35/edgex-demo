@@ -12,74 +12,54 @@ grade: devel
 confinement: devmode
 
 parts:
-  openvino:
-    plugin: dump
-    source: https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.3/linux/l_openvino_toolkit_ubuntu20_2022.3.0.9052.9752fafe8eb_x86_64.tgz
+  ovbase:
+    plugin: nil
     build-packages:
+      - curl
+      - git
       - python3.8-venv
-    stage-packages:
-      - build-essential
-      - libgtk-3-0
-      - libgl1
-      - python3
       - python3-dev
-      - python3-venv
-      - python3-setuptools
       - python3-pip
       - python3-numpy
+      - build-essential
       - cmake
-      - pkg-config
-      - g++
-      - gcc
-      - libc6-dev
-      - libgflags-dev
-      - zlib1g-dev
-      - nlohmann-json3-dev
-      - make
-      - curl
-      - sudo
-      - libusb-1.0-0
-      - libtinfo5
-      - gstreamer1.0-plugins-bad
-      - gstreamer1.0-plugins-base
-      - gstreamer1.0-plugins-good
-      - gstreamer1.0-plugins-ugly
-      - gstreamer1.0-tools
-      - libavcodec58
-      - libavformat58
-      - libavresample4
-      - libavutil56
-      - libgstreamer1.0-0
-      - libswscale5
-      - libboost-filesystem-dev
-      - libboost-program-options-dev
-      - libboost-thread-dev
-      - libjson-c4
-      - libxxf86vm-dev
-      - jq
+      - ninja-build
+      - libgtk-3-dev
+      - libpng-dev
+      - libjpeg-dev
+      - libwebp-dev
+      - libtiff5-dev
+      - libopenexr-dev
+      - libopenblas-dev
+      - libx11-dev
+      - libavutil-dev
+      - libavcodec-dev
+      - libavformat-dev
+      - libswscale-dev
+      - libavresample-dev
+      - libtbb2
+      - libssl-dev
+      - libva-dev
+      - libmfx-dev
+      - libgstreamer1.0-dev
+      - libgstreamer-plugins-base1.0-dev
+    override-pull: |
+      cd $SNAPCRAFT_PART_SRC
+      curl https://storage.openvinotoolkit.org/repositories/openvino/packages/2022.3/linux/l_openvino_toolkit_ubuntu20_2022.3.0.9052.9752fafe8eb_x86_64.tgz | tar xz
+      git clone --recursive -b 4.6.0 --depth=1 https://github.com/opencv/opencv.git
+      git clone --recursive -b releases/2022/3 https://github.com/openvinotoolkit/open_model_zoo.git
     override-build: |
-      mkdir -p $SNAPCRAFT_PART_INSTALL/openvino
-      cp -r $SNAPCRAFT_PART_SRC/* $SNAPCRAFT_PART_INSTALL/openvino
-    override-stage: |
-      snapcraftctl stage
-      python3.8 -m venv $SNAPCRAFT_STAGE
-      source $SNAPCRAFT_STAGE/bin/activate
-      pip install -U pip
-      pip install openvino==2022.3.0 openvino_dev[caffe,kaldi,mxnet,onnx,pytorch,tensorflow2]==2022.3.0
-  opencv:
-    plugin: nil   # I'd love for this to be cmake, but snapcraftctl won't preserve the exported variables in the build override
-    after: [openvino]
-    source: https://github.com/opencv/opencv.git
-    source-tag: 4.6.0
-    source-depth: 1
-    override-build: |
-      export INTEL_OPENVINO_DIR=$SNAPCRAFT_STAGE/openvino
+      python3 -m venv $SNAPCRAFT_PART_INSTALL
+      source $SNAPCRAFT_PART_INSTALL/bin/activate
+      python3 -m pip install -U pip
+      cp -r $SNAPCRAFT_PART_SRC/*openvino* $SNAPCRAFT_PART_INSTALL/openvino
+      export INTEL_OPENVINO_DIR=$SNAPCRAFT_PART_INSTALL/openvino
       export PYTHON_VER="3.8"
       export ZSH_VERSION=""
       export PYTHONPATH=$INTEL_OPENVINO_DIR/python/python3.8
       source $INTEL_OPENVINO_DIR/setupvars.sh -pyver $PYTHON_VER
-      mkdir -p $SNAPCRAFT_PART_BUILD/out
-      cd $SNAPCRAFT_PART_BUILD
+      mkdir -p $SNAPCRAFT_PART_BUILD/opencv
+      cd $SNAPCRAFT_PART_BUILD/opencv
       cmake -G Ninja \
         -D BUILD_INFO_SKIP_EXTRA_MODULES=ON \
         -D BUILD_EXAMPLES=OFF \
@@ -154,61 +134,19 @@ parts:
         -D INF_ENGINE_RELEASE=2022010000 \
         -D VIDEOIO_PLUGIN_LIST=ffmpeg,gstreamer,mfx \
         -D CMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined \
-        -D CMAKE_BUILD_TYPE=Release $SNAPCRAFT_PART_SRC
-      ninja && cmake --install $SNAPCRAFT_PART_BUILD
-    override-stage: |
-      snapcraftctl stage
-      source $SNAPCRAFT_STAGE/bin/activate
-    build-packages:
-      - git
-      - python3-dev
-      - python3-pip
-      - python3-numpy
-      - build-essential
-      - cmake
-      - ninja-build
-      - libgtk-3-dev
-      - libpng-dev
-      - libjpeg-dev
-      - libwebp-dev
-      - libtiff5-dev
-      - libopenexr-dev
-      - libopenblas-dev
-      - libx11-dev
-      - libavutil-dev
-      - libavcodec-dev
-      - libavformat-dev
-      - libswscale-dev
-      - libavresample-dev
-      - libtbb2
-      - libssl-dev
-      - libva-dev
-      - libmfx-dev
-      - libgstreamer1.0-dev
-      - libgstreamer-plugins-base1.0-dev
-  ovbase:
-    plugin: nil
-    after: [openvino, opencv]
-    override-stage: |
-      source $SNAPCRAFT_STAGE/bin/activate
-      export INTEL_OPENVINO_DIR=$SNAPCRAFT_STAGE/openvino
-      cd $SNAPCRAFT_STAGE/openvino
-      mkdir -p $SNAPCRAFT_STAGE/openvino/extras
-      cp -r $SNAPCRAFT_STAGE/opencv $SNAPCRAFT_STAGE/openvino/extras/opencv
-      echo "export OpenCV_DIR=\$SNAP/openvino/extras/opencv/cmake" | tee -a "${SNAPCRAFT_STAGE}/openvino/extras/opencv/setupvars.sh"
-      echo "export LD_LIBRARY_PATH=\$SNAP/openvino/extras/opencv/lib:\$LD_LIBRARY_PATH" | tee -a "${SNAPCRAFT_STAGE}/openvino/extras/opencv/setupvars.sh"
+        -D CMAKE_BUILD_TYPE=Release $SNAPCRAFT_PART_SRC/opencv
+      ninja && cmake --install $SNAPCRAFT_PART_BUILD/opencv
+      mkdir -p $SNAPCRAFT_PART_INSTALL/openvino/extras
+      cp -r $SNAPCRAFT_PART_INSTALL/opencv $SNAPCRAFT_PART_INSTALL/openvino/extras/opencv
+      echo "export OpenCV_DIR=\$SNAP/openvino/extras/opencv/cmake" | tee -a "${SNAPCRAFT_PART_INSTALL}/openvino/extras/opencv/setupvars.sh"
+      echo "export LD_LIBRARY_PATH=\$SNAP/openvino/extras/opencv/lib:\$LD_LIBRARY_PATH" | tee -a "${SNAPCRAFT_PART_INSTALL}/openvino/extras/opencv/setupvars.sh"
+      python3 -m pip install openvino==2022.3.0 openvino_dev[caffe,kaldi,mxnet,onnx,pytorch,tensorflow2]==2022.3.0
+      sed -i '/opencv-python/d' $SNAPCRAFT_PART_SRC/open_model_zoo/demos/common/python/requirements.txt
+      python3 -m pip install $SNAPCRAFT_PART_SRC/open_model_zoo/demos/common/python/
+      python3 -c "from openvino.model_zoo import model_api"
+      $SNAPCRAFT_PART_INSTALL/bin/omz_downloader --name yolo-v2-tiny-ava-0001
   demo:
     plugin: dump
     source: demo
     after: [ovbase]
-apps:
-  edgex-demo:
-    command: start-object-detection.sh
-    environment:
-      DISPLAY: :0
-      DETECTION_MODEL: $SNAP/openvino/deployment_tools/open_model_zoo/tools/downloader/intel/yolo-v2-tiny-ava-0001/FP32/yolo-v2-tiny-ava-0001.xml
-      DETECTION_MODEL_PROC: $SNAP/openvino/data_processing/dl_streamer/samples/model_proc/intel/object_detection/yolo-v2-tiny-ava-0001.json
-      CORE_COMMAND: http://localhost:59882
-      LD_LIBRARY_PATH: $SNAP/openvino/opt/intel/mediasdk/lib64:$SNAP/openvino/data_processing/dl_streamer/lib:$SNAP/openvino/data_processing/gstreamer/lib:$SNAP/openvino/opencv/lib:$SNAP/openvino/deployment_tools/ngraph/lib:$SNAP/openvino/deployment_tools/inference_engine/external/tbb/lib:$SNAP/openvino/deployment_tools/inference_engine/external/hddl/lib:$SNAP/openvino/deployment_tools/inference_engine/external/omp/lib:$SNAP/openvino/deployment_tools/inference_engine/external/gna/lib:$SNAP/openvino/deployment_tools/inference_engine/external/mkltiny_lnx/lib:$SNAP/openvino/deployment_tools/inference_engine/lib/intel64:$LD_LIBRARY_PATH
-      INTEL_OPENVINO_DIR: $SNAP/openvino
-      PYTHONPATH: $INTEL_OPENVINO_DIR/python/python3.8:$PYTHONPATH
+

@@ -1,7 +1,0 @@
-#!/bin/bash
-
-source $SNAP/bin/activate
-mkdir -p $SNAP_DATA/demo
-cd $SNAP_DATA/demo
-$SNAP/bin/omz_downloader --name yolo-v2-tiny-ava-0001
-
