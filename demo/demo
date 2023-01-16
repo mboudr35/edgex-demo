@@ -1,0 +1,13 @@
+#!/bin/bash
+
+source $SNAP/bin/activate
+export DETECTION_MODEL=$SNAP/intel/yolo-v2-tiny-ava-0001/FP32/yolo-v2-tiny-ava-0001.xml
+export DETECTION_MODEL_PROC=$SNAP/openvino/data_processing/dl_streamer/samples/model_proc/intel/object_detection/yolo-v2-tiny-ava-0001.json
+export CORE_COMMAND=http://localhost:59882
+export DISPLAY=:0
+export INTEL_OPENVINO_DIR=$SNAP/openvino
+export PYTHONPATH=$INTEL_OPENVINO_DIR/python/python3.8:$PYTHONPATH
+export LD_LIBRARY_PATH=$SNAP/openvino/opt/intel/mediasdk/lib64:$SNAP/openvino/data_processing/dl_streamer/lib:$SNAP/openvino/data_processing/gstreamer/lib:$SNAP/openvino/opencv/lib:$SNAP/openvino/deployment_tools/ngraph/lib:$SNAP/openvino/deployment_tools/inference_engine/external/tbb/lib:$SNAP/openvino/deployment_tools/inference_engine/external/hddl/lib:$SNAP/openvino/deployment_tools/inference_engine/external/omp/lib:$SNAP/openvino/deployment_tools/inference_engine/external/gna/lib:$SNAP/openvino/deployment_tools/inference_engine/external/mkltiny_lnx/lib:$SNAP/openvino/deployment_tools/inference_engine/lib/intel64:$LD_LIBRARY_PATH
+
+exec $SNAP/start-object-detection.sh
+
