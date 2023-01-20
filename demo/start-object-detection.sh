@@ -29,7 +29,7 @@ echo "RTSP URL of EdgeX Device Camera: $RTSP_URL"
 
 echo "Starting object detection demo"
 source ./data_processing/dl_streamer/bin/setupvars.sh
-cd /srv
+cd $SNAP/srv
 python3 -m http.server 8880 &
 exec gst-launch-1.0 \
 	urisourcebin uri=$RTSP_URL ! decodebin ! \
