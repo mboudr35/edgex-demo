@@ -38,7 +38,7 @@ exec gst-launch-1.0 \
 	gvametapublish address=localhost:1883 method=mqtt topic=openvino/MQTT-test-device/prediction qos=true ! queue ! \
 	gvawatermark ! videoconvert ! \
 	x264enc tune=zerolatency ! mpegtsmux ! \
-	hlssink playlist-root=http://hades.olympus.lewont.in:8880 \
+	hlssink playlist-root=http://localhost:8880 \
 	location=/srv/segment_%05d.ts target-duration=5 max-files=5
 
 
